@@ -9,13 +9,26 @@ import {
   APPROVE, APPROVE_COLORS,
   initItems, initFinish, initParts, initApproval, makeCnc, initPhase,
 } from "./data/initialData";
-import type { FinishRow, PartRow, ApprovalRow, CncRow, PhaseRow } from "./data/initialData";
+import type { Item, FinishRow, PartRow, ApprovalRow, CncRow, PhaseRow } from "./data/initialData";
+
+const addBtnStyle: React.CSSProperties = {
+  padding: "4px 12px", borderRadius: 4, border: "1px dashed #94a3b8",
+  background: "#f8fafc", color: "#64748b", fontSize: 11, cursor: "pointer",
+  fontWeight: 500, marginTop: 8, display: "inline-flex", alignItems: "center", gap: 4,
+};
+
+const delBtnStyle: React.CSSProperties = {
+  padding: "1px 6px", borderRadius: 3, border: "none",
+  background: "transparent", color: "#cbd5e1", fontSize: 14, cursor: "pointer",
+  lineHeight: 1,
+};
 
 function App() {
   const readOnly = new URLSearchParams(window.location.search).get("mode") === "view";
 
   const [tab, setTab] = useState(0);
   const [filter, setFilter] = useState("ALL");
+  const [items, setItems] = useLocalStorage<Item[]>("panpuri-items", initItems);
   const [finish, setFinish] = useLocalStorage<FinishRow[]>("panpuri-finish", initFinish);
   const [parts, setParts] = useLocalStorage<PartRow[]>("panpuri-parts", initParts);
   const [approval, setApproval] = useLocalStorage<ApprovalRow[]>("panpuri-approval", initApproval);
@@ -32,20 +45,61 @@ function App() {
   const fltApproval = filter === "ALL" ? approval : approval.filter(d => d.item === filter);
   const fltCnc = filter === "ALL" ? cnc : cnc.filter(d => d.item === filter);
   const fltPhase = filter === "ALL" ? phase : phase.filter(d => d.id === filter);
-  const fltItems = filter === "ALL" ? initItems : initItems.filter(d => d.id === filter);
+  const fltItems = filter === "ALL" ? items : items.filter(d => d.id === filter);
 
   const updFinish = (gi: number, k: string, v: string) => setFinish(p => p.map((r, j) => j === gi ? { ...r, [k]: v } : r));
   const updParts = (gi: number, k: string, v: string) => setParts(p => p.map((r, j) => j === gi ? { ...r, [k]: v } : r));
   const updApproval = (gi: number, k: string, v: string) => setApproval(p => p.map((r, j) => j === gi ? { ...r, [k]: v } : r));
   const updCnc = (gi: number, k: string, v: string) => setCnc(p => p.map((r, j) => j === gi ? { ...r, [k]: v } : r));
   const updPhase = (id: string, ph: string, v: string) => setPhase(p => p.map(r => r.id === id ? { ...r, phases: { ...r.phases, [ph]: v } } : r));
+  const updItem = (gi: number, k: string, v: string | number) => setItems(p => p.map((r, j) => j === gi ? { ...r, [k]: v } : r));
+
+  const delRow = <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>, gi: number) => {
+    if (!confirm("この行を削除しますか？")) return;
+    setter(p => p.filter((_, j) => j !== gi));
+  };
+
+  // Add row helpers
+  const addItem = () => {
+    const id = `NEW-${String(items.length + 1).padStart(2, "0")}`;
+    setItems(p => [...p, { id, name: "", qty: 1, dims: "", page: "" }]);
+    setPhase(p => [...p, { id, name: "", qty: 1, phases: Object.fromEntries(PHASES.map(ph => [ph, "未着手"])) }]);
+  };
+  const delItem = (gi: number) => {
+    const it = items[gi];
+    if (!confirm(`${it.id}（${it.name || "名称未設定"}）を削除しますか？関連する仕上げ・部品・承認・CNC・フェーズも削除されます。`)) return;
+    setItems(p => p.filter((_, j) => j !== gi));
+    setFinish(p => p.filter(r => r.item !== it.id));
+    setParts(p => p.filter(r => r.item !== it.id));
+    setApproval(p => p.filter(r => r.item !== it.id));
+    setCnc(p => p.filter(r => r.item !== it.id));
+    setPhase(p => p.filter(r => r.id !== it.id));
+    if (filter === it.id) setFilter("ALL");
+  };
+
+  const addFinish = () => {
+    const itemId = filter !== "ALL" ? filter : (items[0]?.id || "");
+    setFinish(p => [...p, { item: itemId, part: "", finish: "", note: "", sample: "未確認", status: "未着手" }]);
+  };
+  const addPart = () => {
+    const itemId = filter !== "ALL" ? filter : (items[0]?.id || "");
+    setParts(p => [...p, { item: itemId, part: "", material: "", thickness: "", qty: "", cncReq: false, procure: "未発注", note: "" }]);
+  };
+  const addApproval = () => {
+    const itemId = filter !== "ALL" ? filter : (items[0]?.id || "");
+    setApproval(p => [...p, { item: itemId, category: "", status: "未着手", approver: "", date: "", note: "" }]);
+  };
+  const addCnc = () => {
+    const itemId = filter !== "ALL" ? filter : (items[0]?.id || "");
+    setCnc(p => [...p, { item: itemId, part: "", material: "", thickness: "", qty: "", cncReq: true, procure: "未発注", note: "", idx: p.length, machineOp: "切り出し", dataStatus: "未着手", cncStatus: "未着手" }]);
+  };
 
   const completedApproval = approval.filter(a => a.status === "承認済").length;
   const completedFinish = finish.filter(f => f.status === "完了").length;
   const completedCnc = cnc.filter(c => c.cncStatus === "完了").length;
 
   const handleExport = () => {
-    const data = { finish, parts, approval, cnc, phase, exportedAt: new Date().toISOString() };
+    const data = { items, finish, parts, approval, cnc, phase, exportedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -62,6 +116,7 @@ function App() {
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target?.result as string);
+        if (data.items) setItems(data.items);
         if (data.finish) setFinish(data.finish);
         if (data.parts) setParts(data.parts);
         if (data.approval) setApproval(data.approval);
@@ -78,6 +133,7 @@ function App() {
 
   const handleReset = () => {
     if (!confirm("すべてのデータを初期値にリセットしますか？")) return;
+    setItems(initItems);
     setFinish(initFinish);
     setParts(initParts);
     setApproval(initApproval);
@@ -91,8 +147,21 @@ function App() {
     alert("閲覧用URLをコピーしました");
   };
 
+  // Image modal
+  const [modalImg, setModalImg] = useState<string | null>(null);
+
   return (
     <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif", color: "#1e293b", minHeight: "100vh", background: "#f8fafc" }}>
+      {/* Image modal */}
+      {modalImg && (
+        <div onClick={() => setModalImg(null)} style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000,
+          display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out",
+        }}>
+          <img src={modalImg} alt="" style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 8, boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }} />
+        </div>
+      )}
+
       <div style={{ padding: "14px 16px 0", borderBottom: "1px solid #e2e8f0", background: "#fff" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
           <h1 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>什器製作管理シート</h1>
@@ -116,7 +185,7 @@ function App() {
         </div>
         <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
           <button onClick={() => setFilter("ALL")} style={filterBtnStyle(filter === "ALL")}>全品番</button>
-          {initItems.map(it => (
+          {items.map(it => (
             <button key={it.id} onClick={() => setFilter(it.id)} style={filterBtnStyle(filter === it.id)}>{it.id}</button>
           ))}
         </div>
@@ -127,84 +196,176 @@ function App() {
       </div>
 
       <div style={{ padding: "12px 16px", overflowX: "auto" }}>
+        {/* Tab 0: 品番一覧 */}
         {tab === 0 && (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr>
-              <Th>品番</Th><Th>名称</Th><Th>台数</Th><Th>概略寸法</Th><Th>図面</Th><Th>仕上げ進捗</Th><Th>承認進捗</Th><Th>現フェーズ</Th>
-            </tr></thead>
-            <tbody>
-              {fltItems.map(it => {
-                const fc = finish.filter(f => f.item === it.id);
-                const fd = fc.filter(f => f.status === "完了").length;
-                const ac = approval.filter(a => a.item === it.id);
-                const ad = ac.filter(a => a.status === "承認済").length;
-                const ph = phase.find(p => p.id === it.id);
-                const curPhase = PHASES.find(p => ph?.phases[p] === "進行中") || PHASES.find(p => ph?.phases[p] === "未着手") || "納品";
-                return (
-                  <tr key={it.id}>
-                    <Td hl>{it.id}</Td><Td>{it.name}</Td><Td>{it.qty}</Td><Td>{it.dims}</Td><Td>P.{it.page}</Td>
-                    <Td><span style={{ fontSize: 11 }}>{fd}/{fc.length}</span></Td>
-                    <Td><span style={{ fontSize: 11 }}>{ad}/{ac.length}</span></Td>
-                    <Td><span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: (PHASE_COLORS[curPhase] || "#94a3b8") + "20", color: PHASE_COLORS[curPhase] || "#94a3b8" }}>{curPhase}</span></Td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead><tr>
+                {!readOnly && <Th w="30px">{""}</Th>}
+                <Th>品番</Th><Th>名称</Th><Th>台数</Th><Th>概略寸法</Th><Th>図面</Th><Th>仕上げ進捗</Th><Th>承認進捗</Th><Th>現フェーズ</Th>
+              </tr></thead>
+              <tbody>
+                {fltItems.map(it => {
+                  const gi = items.indexOf(it);
+                  const fc = finish.filter(f => f.item === it.id);
+                  const fd = fc.filter(f => f.status === "完了").length;
+                  const ac = approval.filter(a => a.item === it.id);
+                  const ad = ac.filter(a => a.status === "承認済").length;
+                  const ph = phase.find(p => p.id === it.id);
+                  const curPhase = PHASES.find(p => ph?.phases[p] === "進行中") || PHASES.find(p => ph?.phases[p] === "未着手") || "納品";
+                  return (
+                    <tr key={it.id}>
+                      {!readOnly && <Td><button onClick={() => delItem(gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      <Td hl><EditCell value={it.id} onChange={v => {
+                        const oldId = it.id;
+                        updItem(gi, "id", v);
+                        setFinish(p => p.map(r => r.item === oldId ? { ...r, item: v } : r));
+                        setParts(p => p.map(r => r.item === oldId ? { ...r, item: v } : r));
+                        setApproval(p => p.map(r => r.item === oldId ? { ...r, item: v } : r));
+                        setCnc(p => p.map(r => r.item === oldId ? { ...r, item: v } : r));
+                        setPhase(p => p.map(r => r.id === oldId ? { ...r, id: v } : r));
+                        if (filter === oldId) setFilter(v);
+                      }} placeholder="品番" width={70} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={it.name} onChange={v => updItem(gi, "name", v)} placeholder="名称" width={140} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={String(it.qty)} onChange={v => updItem(gi, "qty", Number(v) || 0)} placeholder="0" width={30} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={it.dims} onChange={v => updItem(gi, "dims", v)} placeholder="寸法" width={120} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={it.page} onChange={v => updItem(gi, "page", v)} placeholder="P." width={40} readOnly={readOnly} /></Td>
+                      <Td><span style={{ fontSize: 11 }}>{fd}/{fc.length}</span></Td>
+                      <Td><span style={{ fontSize: 11 }}>{ad}/{ac.length}</span></Td>
+                      <Td><span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: (PHASE_COLORS[curPhase] || "#94a3b8") + "20", color: PHASE_COLORS[curPhase] || "#94a3b8" }}>{curPhase}</span></Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {!readOnly && <button onClick={addItem} style={addBtnStyle}>+ 品番を追加</button>}
+          </div>
         )}
 
+        {/* Tab 1: 仕上げ */}
         {tab === 1 && (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><Th>品番</Th><Th>部位</Th><Th>仕上げ仕様</Th><Th>備考</Th><Th>サンプル</Th><Th>ステータス</Th><Th>担当</Th><Th>期限</Th></tr></thead>
-            <tbody>
-              {fltFinish.map(f => {
-                const gi = finish.indexOf(f);
-                return (
-                  <tr key={gi}>
-                    <Td hl>{f.item}</Td><Td>{f.part}</Td><Td>{f.finish}</Td>
-                    <Td><EditCell value={f.note} onChange={v => updFinish(gi, "note", v)} placeholder="備考" width={120} readOnly={readOnly} /></Td>
-                    <Td><CycleBadge value={f.sample} options={SAMPLE} colors={SAMPLE_COLORS} onChange={v => updFinish(gi, "sample", v)} readOnly={readOnly} /></Td>
-                    <Td><CycleBadge value={f.status} options={STATUS} colors={STATUS_COLORS} onChange={v => updFinish(gi, "status", v)} readOnly={readOnly} /></Td>
-                    <Td><EditCell value={f.assignee || ""} onChange={v => updFinish(gi, "assignee", v)} placeholder="担当" width={60} readOnly={readOnly} /></Td>
-                    <Td><EditCell value={f.deadline || ""} onChange={v => updFinish(gi, "deadline", v)} placeholder="MM/DD" width={60} readOnly={readOnly} /></Td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead><tr>
+                {!readOnly && <Th w="30px">{""}</Th>}
+                <Th>品番</Th><Th>部位</Th><Th>仕上げ仕様</Th><Th>備考</Th><Th>サンプル</Th><Th>ステータス</Th><Th>担当</Th><Th>期限</Th>
+              </tr></thead>
+              <tbody>
+                {fltFinish.map(f => {
+                  const gi = finish.indexOf(f);
+                  return (
+                    <tr key={gi}>
+                      {!readOnly && <Td><button onClick={() => delRow(setFinish, gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      <Td hl><EditCell value={f.item} onChange={v => updFinish(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={f.part} onChange={v => updFinish(gi, "part", v)} placeholder="部位" width={80} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={f.finish} onChange={v => updFinish(gi, "finish", v)} placeholder="仕上げ" width={140} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={f.note} onChange={v => updFinish(gi, "note", v)} placeholder="備考" width={120} readOnly={readOnly} /></Td>
+                      <Td><CycleBadge value={f.sample} options={SAMPLE} colors={SAMPLE_COLORS} onChange={v => updFinish(gi, "sample", v)} readOnly={readOnly} /></Td>
+                      <Td><CycleBadge value={f.status} options={STATUS} colors={STATUS_COLORS} onChange={v => updFinish(gi, "status", v)} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={f.assignee || ""} onChange={v => updFinish(gi, "assignee", v)} placeholder="担当" width={60} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={f.deadline || ""} onChange={v => updFinish(gi, "deadline", v)} placeholder="MM/DD" width={60} readOnly={readOnly} /></Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {!readOnly && <button onClick={addFinish} style={addBtnStyle}>+ 仕上げ行を追加</button>}
+          </div>
         )}
 
+        {/* Tab 2: 部品 */}
         {tab === 2 && (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><Th>品番</Th><Th>部品名</Th><Th>素材</Th><Th>板厚</Th><Th>数量</Th><Th>CNC</Th><Th>調達</Th><Th>担当</Th><Th>備考</Th></tr></thead>
-            <tbody>
-              {fltParts.map(p => {
-                const gi = parts.indexOf(p);
-                return (
-                  <tr key={gi} style={{ background: p.note.includes("別途") ? "#fef2f210" : "transparent" }}>
-                    <Td hl>{p.item}</Td><Td>{p.part}</Td><Td>{p.material}</Td><Td>{p.thickness}</Td><Td>{p.qty}</Td>
-                    <Td>{p.cncReq ? <span style={{ color: "#f97316", fontWeight: 600, fontSize: 11 }}>要</span> : <span style={{ color: "#cbd5e1", fontSize: 11 }}>-</span>}</Td>
-                    <Td><CycleBadge value={p.procure} options={PROCURE} colors={PROCURE_COLORS} onChange={v => updParts(gi, "procure", v)} readOnly={readOnly} /></Td>
-                    <Td><EditCell value={p.assignee || ""} onChange={v => updParts(gi, "assignee", v)} placeholder="担当" width={60} readOnly={readOnly} /></Td>
-                    <Td><EditCell value={p.note} onChange={v => updParts(gi, "note", v)} placeholder="備考" width={100} readOnly={readOnly} /></Td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead><tr>
+                {!readOnly && <Th w="30px">{""}</Th>}
+                <Th>画像</Th><Th>品番</Th><Th>部品名</Th><Th>素材</Th><Th>板厚</Th><Th>数量</Th><Th>CNC</Th><Th>調達</Th><Th>リンク</Th><Th>担当</Th><Th>備考</Th>
+              </tr></thead>
+              <tbody>
+                {fltParts.map(p => {
+                  const gi = parts.indexOf(p);
+                  return (
+                    <tr key={gi} style={{ background: p.note.includes("別途") ? "#fef2f210" : "transparent" }}>
+                      {!readOnly && <Td><button onClick={() => delRow(setParts, gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      <Td>
+                        {p.imageUrl ? (
+                          <img
+                            src={p.imageUrl}
+                            alt={p.part}
+                            onClick={() => setModalImg(p.imageUrl!)}
+                            style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 4, cursor: "zoom-in", border: "1px solid #e2e8f0" }}
+                          />
+                        ) : (
+                          !readOnly ? (
+                            <EditCell value="" onChange={v => updParts(gi, "imageUrl", v)} placeholder="URL" width={40} readOnly={readOnly} />
+                          ) : (
+                            <span style={{ color: "#cbd5e1", fontSize: 11 }}>-</span>
+                          )
+                        )}
+                      </Td>
+                      <Td hl><EditCell value={p.item} onChange={v => updParts(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={p.part} onChange={v => updParts(gi, "part", v)} placeholder="部品名" width={100} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={p.material} onChange={v => updParts(gi, "material", v)} placeholder="素材" width={80} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={p.thickness} onChange={v => updParts(gi, "thickness", v)} placeholder="板厚" width={60} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={p.qty} onChange={v => updParts(gi, "qty", v)} placeholder="数量" width={50} readOnly={readOnly} /></Td>
+                      <Td>
+                        {readOnly ? (
+                          p.cncReq ? <span style={{ color: "#f97316", fontWeight: 600, fontSize: 11 }}>要</span> : <span style={{ color: "#cbd5e1", fontSize: 11 }}>-</span>
+                        ) : (
+                          <button
+                            onClick={() => setParts(prev => prev.map((r, j) => j === gi ? { ...r, cncReq: !r.cncReq } : r))}
+                            style={{ ...delBtnStyle, color: p.cncReq ? "#f97316" : "#cbd5e1", fontWeight: 600, fontSize: 11 }}
+                          >{p.cncReq ? "要" : "-"}</button>
+                        )}
+                      </Td>
+                      <Td><CycleBadge value={p.procure} options={PROCURE} colors={PROCURE_COLORS} onChange={v => updParts(gi, "procure", v)} readOnly={readOnly} /></Td>
+                      <Td>
+                        {p.link ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <a href={p.link} target="_blank" rel="noopener noreferrer" style={{ color: "#3b82f6", fontSize: 11, textDecoration: "none" }} title={p.link}>🔗</a>
+                            {!readOnly && <EditCell value={p.link} onChange={v => updParts(gi, "link", v)} placeholder="URL" width={80} readOnly={readOnly} />}
+                          </div>
+                        ) : (
+                          !readOnly ? (
+                            <EditCell value="" onChange={v => updParts(gi, "link", v)} placeholder="URL" width={80} readOnly={readOnly} />
+                          ) : (
+                            <span style={{ color: "#cbd5e1", fontSize: 11 }}>-</span>
+                          )
+                        )}
+                      </Td>
+                      <Td><EditCell value={p.assignee || ""} onChange={v => updParts(gi, "assignee", v)} placeholder="担当" width={60} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={p.note} onChange={v => updParts(gi, "note", v)} placeholder="備考" width={100} readOnly={readOnly} /></Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {!readOnly && <button onClick={addPart} style={addBtnStyle}>+ 部品行を追加</button>}
+            {!readOnly && (
+              <div style={{ marginTop: 8, fontSize: 10, color: "#94a3b8" }}>
+                画像: URLを入力するとサムネイル表示（クリックで拡大）/ リンク: 製品ページ等のURLを入力
+              </div>
+            )}
+          </div>
         )}
 
+        {/* Tab 3: 承認 */}
         {tab === 3 && (
           <div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr><Th>品番</Th><Th>承認項目</Th><Th>ステータス</Th><Th>承認者</Th><Th>承認日</Th><Th>備考</Th></tr></thead>
+              <thead><tr>
+                {!readOnly && <Th w="30px">{""}</Th>}
+                <Th>品番</Th><Th>承認項目</Th><Th>ステータス</Th><Th>承認者</Th><Th>承認日</Th><Th>備考</Th>
+              </tr></thead>
               <tbody>
                 {fltApproval.map(a => {
                   const gi = approval.indexOf(a);
                   const warn = a.note.includes("指示") || a.note.includes("確認") || a.note.includes("別途");
                   return (
                     <tr key={gi} style={{ background: warn && a.status !== "承認済" ? "#fef3c7" : "transparent" }}>
-                      <Td hl>{a.item}</Td><Td>{a.category}</Td>
+                      {!readOnly && <Td><button onClick={() => delRow(setApproval, gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      <Td hl><EditCell value={a.item} onChange={v => updApproval(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={a.category} onChange={v => updApproval(gi, "category", v)} placeholder="項目" width={100} readOnly={readOnly} /></Td>
                       <Td><CycleBadge value={a.status} options={APPROVE} colors={APPROVE_COLORS} onChange={v => updApproval(gi, "status", v)} readOnly={readOnly} /></Td>
                       <Td><EditCell value={a.approver} onChange={v => updApproval(gi, "approver", v)} placeholder="承認者" width={80} readOnly={readOnly} /></Td>
                       <Td><EditCell value={a.date} onChange={v => updApproval(gi, "date", v)} placeholder="YYYY/MM/DD" width={90} readOnly={readOnly} /></Td>
@@ -214,22 +375,32 @@ function App() {
                 })}
               </tbody>
             </table>
+            {!readOnly && <button onClick={addApproval} style={addBtnStyle}>+ 承認行を追加</button>}
             <div style={{ marginTop: 10, padding: "6px 10px", background: "#fef3c7", borderRadius: 6, fontSize: 11, color: "#92400e" }}>
               黄色行 = 図面上の確認依頼事項（未承認）
             </div>
           </div>
         )}
 
+        {/* Tab 4: CNC加工 */}
         {tab === 4 && (
           <div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr><Th>品番</Th><Th>部品名</Th><Th>板厚</Th><Th>数量</Th><Th>加工内容</Th><Th>データ準備</Th><Th>加工状況</Th><Th>担当</Th><Th>備考</Th></tr></thead>
+              <thead><tr>
+                {!readOnly && <Th w="30px">{""}</Th>}
+                <Th>品番</Th><Th>部品名</Th><Th>板厚</Th><Th>数量</Th><Th>加工内容</Th><Th>データ準備</Th><Th>加工状況</Th><Th>担当</Th><Th>備考</Th>
+              </tr></thead>
               <tbody>
                 {fltCnc.map(c => {
                   const gi = cnc.indexOf(c);
                   return (
                     <tr key={gi}>
-                      <Td hl>{c.item}</Td><Td>{c.part}</Td><Td>{c.thickness}</Td><Td>{c.qty}</Td><Td>{c.machineOp}</Td>
+                      {!readOnly && <Td><button onClick={() => delRow(setCnc, gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      <Td hl><EditCell value={c.item} onChange={v => updCnc(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={c.part} onChange={v => updCnc(gi, "part", v)} placeholder="部品名" width={100} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={c.thickness} onChange={v => updCnc(gi, "thickness", v)} placeholder="板厚" width={60} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={c.qty} onChange={v => updCnc(gi, "qty", v)} placeholder="数量" width={50} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={c.machineOp} onChange={v => updCnc(gi, "machineOp", v)} placeholder="加工内容" width={80} readOnly={readOnly} /></Td>
                       <Td><CycleBadge value={c.dataStatus} options={STATUS} colors={STATUS_COLORS} onChange={v => updCnc(gi, "dataStatus", v)} readOnly={readOnly} /></Td>
                       <Td><CycleBadge value={c.cncStatus} options={STATUS} colors={STATUS_COLORS} onChange={v => updCnc(gi, "cncStatus", v)} readOnly={readOnly} /></Td>
                       <Td><EditCell value={c.assignee || ""} onChange={v => updCnc(gi, "assignee", v)} placeholder="担当" width={60} readOnly={readOnly} /></Td>
@@ -239,6 +410,7 @@ function App() {
                 })}
               </tbody>
             </table>
+            {!readOnly && <button onClick={addCnc} style={addBtnStyle}>+ CNC行を追加</button>}
             <div style={{ marginTop: 10, padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, display: "flex", gap: 16, fontSize: 11, flexWrap: "wrap" }}>
               {["円形切り出し", "穴あけ+切り出し", "曲面加工", "切り出し"].map(op => (
                 <span key={op}>{op}: <strong>{cnc.filter(c => c.machineOp === op).length}</strong> / 完了 <strong style={{ color: "#10b981" }}>{cnc.filter(c => c.machineOp === op && c.cncStatus === "完了").length}</strong></span>
@@ -247,6 +419,7 @@ function App() {
           </div>
         )}
 
+        {/* Tab 5: フェーズ */}
         {tab === 5 && (
           <div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -273,7 +446,8 @@ function App() {
                   <>
                     <strong style={{ color: "#3b82f6" }}>バッジ</strong> → クリックでステータス切替（未着手→進行中→完了→保留）<br />
                     <strong style={{ color: "#3b82f6" }}>テキスト欄</strong> → クリックで編集、Enter確定、Escキャンセル<br />
-                    <strong style={{ color: "#3b82f6" }}>品番フィルタ</strong> → 上部ボタンで品番絞り込み（全タブ連動）
+                    <strong style={{ color: "#3b82f6" }}>品番フィルタ</strong> → 上部ボタンで品番絞り込み（全タブ連動）<br />
+                    <strong style={{ color: "#3b82f6" }}>×ボタン</strong> → 行の削除 / <strong style={{ color: "#3b82f6" }}>+ボタン</strong> → 行の追加
                   </>
                 )}
               </div>

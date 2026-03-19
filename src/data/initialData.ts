@@ -38,6 +38,8 @@ export interface PartRow {
   procure: string;
   note: string;
   assignee?: string;
+  link?: string;
+  imageUrl?: string;
 }
 
 export interface ApprovalRow {
