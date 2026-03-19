@@ -15,6 +15,7 @@ export interface Item {
   qty: number;
   dims: string;
   page: string;
+  imageUrl?: string;
 }
 
 export interface FinishRow {
@@ -26,6 +27,7 @@ export interface FinishRow {
   status: string;
   assignee?: string;
   deadline?: string;
+  imageUrl?: string;
 }
 
 export interface PartRow {
@@ -66,6 +68,7 @@ export interface CncRow {
   cncStatus: string;
   assignee?: string;
   cncNote?: string;
+  imageUrl?: string;
 }
 
 export interface PhaseRow {

@@ -3,6 +3,7 @@ import { useLocalStorage } from "./hooks/useLocalStorage";
 import { CycleBadge } from "./components/CycleBadge";
 import { EditCell } from "./components/EditCell";
 import { Th, Td, Tab } from "./components/TableComponents";
+import { ImageCell } from "./components/ImageCell";
 import {
   PHASES, PHASE_COLORS, STATUS, STATUS_COLORS,
   PROCURE, PROCURE_COLORS, SAMPLE, SAMPLE_COLORS,
@@ -202,7 +203,7 @@ function App() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr>
                 {!readOnly && <Th w="30px">{""}</Th>}
-                <Th>品番</Th><Th>名称</Th><Th>台数</Th><Th>概略寸法</Th><Th>図面</Th><Th>仕上げ進捗</Th><Th>承認進捗</Th><Th>現フェーズ</Th>
+                <Th>画像</Th><Th>品番</Th><Th>名称</Th><Th>台数</Th><Th>概略寸法</Th><Th>図面</Th><Th>仕上げ進捗</Th><Th>承認進捗</Th><Th>現フェーズ</Th>
               </tr></thead>
               <tbody>
                 {fltItems.map(it => {
@@ -216,6 +217,7 @@ function App() {
                   return (
                     <tr key={it.id}>
                       {!readOnly && <Td><button onClick={() => delItem(gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      <Td><ImageCell imageUrl={it.imageUrl} onChangeUrl={v => updItem(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
                       <Td hl><EditCell value={it.id} onChange={v => {
                         const oldId = it.id;
                         updItem(gi, "id", v);
@@ -248,7 +250,7 @@ function App() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr>
                 {!readOnly && <Th w="30px">{""}</Th>}
-                <Th>品番</Th><Th>部位</Th><Th>仕上げ仕様</Th><Th>備考</Th><Th>サンプル</Th><Th>ステータス</Th><Th>担当</Th><Th>期限</Th>
+                <Th>画像</Th><Th>品番</Th><Th>部位</Th><Th>仕上げ仕様</Th><Th>備考</Th><Th>サンプル</Th><Th>ステータス</Th><Th>担当</Th><Th>期限</Th>
               </tr></thead>
               <tbody>
                 {fltFinish.map(f => {
@@ -256,6 +258,7 @@ function App() {
                   return (
                     <tr key={gi}>
                       {!readOnly && <Td><button onClick={() => delRow(setFinish, gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      <Td><ImageCell imageUrl={f.imageUrl} onChangeUrl={v => updFinish(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
                       <Td hl><EditCell value={f.item} onChange={v => updFinish(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
                       <Td><EditCell value={f.part} onChange={v => updFinish(gi, "part", v)} placeholder="部位" width={80} readOnly={readOnly} /></Td>
                       <Td><EditCell value={f.finish} onChange={v => updFinish(gi, "finish", v)} placeholder="仕上げ" width={140} readOnly={readOnly} /></Td>
@@ -287,22 +290,7 @@ function App() {
                   return (
                     <tr key={gi} style={{ background: p.note.includes("別途") ? "#fef2f210" : "transparent" }}>
                       {!readOnly && <Td><button onClick={() => delRow(setParts, gi)} style={delBtnStyle} title="削除">×</button></Td>}
-                      <Td>
-                        {p.imageUrl ? (
-                          <img
-                            src={p.imageUrl}
-                            alt={p.part}
-                            onClick={() => setModalImg(p.imageUrl!)}
-                            style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 4, cursor: "zoom-in", border: "1px solid #e2e8f0" }}
-                          />
-                        ) : (
-                          !readOnly ? (
-                            <EditCell value="" onChange={v => updParts(gi, "imageUrl", v)} placeholder="URL" width={40} readOnly={readOnly} />
-                          ) : (
-                            <span style={{ color: "#cbd5e1", fontSize: 11 }}>-</span>
-                          )
-                        )}
-                      </Td>
+                      <Td><ImageCell imageUrl={p.imageUrl} onChangeUrl={v => updParts(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
                       <Td hl><EditCell value={p.item} onChange={v => updParts(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
                       <Td><EditCell value={p.part} onChange={v => updParts(gi, "part", v)} placeholder="部品名" width={100} readOnly={readOnly} /></Td>
                       <Td><EditCell value={p.material} onChange={v => updParts(gi, "material", v)} placeholder="素材" width={80} readOnly={readOnly} /></Td>
@@ -388,7 +376,7 @@ function App() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr>
                 {!readOnly && <Th w="30px">{""}</Th>}
-                <Th>品番</Th><Th>部品名</Th><Th>板厚</Th><Th>数量</Th><Th>加工内容</Th><Th>データ準備</Th><Th>加工状況</Th><Th>担当</Th><Th>備考</Th>
+                <Th>画像</Th><Th>品番</Th><Th>部品名</Th><Th>板厚</Th><Th>数量</Th><Th>加工内容</Th><Th>データ準備</Th><Th>加工状況</Th><Th>担当</Th><Th>備考</Th>
               </tr></thead>
               <tbody>
                 {fltCnc.map(c => {
@@ -396,6 +384,7 @@ function App() {
                   return (
                     <tr key={gi}>
                       {!readOnly && <Td><button onClick={() => delRow(setCnc, gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      <Td><ImageCell imageUrl={c.imageUrl} onChangeUrl={v => updCnc(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
                       <Td hl><EditCell value={c.item} onChange={v => updCnc(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
                       <Td><EditCell value={c.part} onChange={v => updCnc(gi, "part", v)} placeholder="部品名" width={100} readOnly={readOnly} /></Td>
                       <Td><EditCell value={c.thickness} onChange={v => updCnc(gi, "thickness", v)} placeholder="板厚" width={60} readOnly={readOnly} /></Td>
