@@ -47,7 +47,7 @@ export interface PartRow {
   companyProduce?: string;
 }
 
-export const COMPANIES = ["", "VUILD", "KOKKOK", "BETRUST", "Be,想空間", "サンオンクラフト"] as const;
+export const COMPANIES = ["", "VUILD", "KOKKOK", "BETRUST", "Be,想空間", "サンオンクラフト", "ユタカ産業"] as const;
 export const COMPANY_COLORS: Record<string, string> = {
   "": "#94a3b8",
   "VUILD": "#3b82f6",
@@ -55,6 +55,7 @@ export const COMPANY_COLORS: Record<string, string> = {
   "BETRUST": "#8b5cf6",
   "Be,想空間": "#10b981",
   "サンオンクラフト": "#ef4444",
+  "ユタカ産業": "#0891b2",
 };
 
 export interface ApprovalRow {

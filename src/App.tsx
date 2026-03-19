@@ -54,8 +54,17 @@ function App() {
 
   const importRef = useRef<HTMLInputElement>(null);
 
-  const tabs = ["品番一覧", "仕上げ", "部品", "承認", "CNC加工", "フェーズ"];
-  const icons = ["📋", "🎨", "🔩", "✅", "🔧", "📊"];
+  const tabs = ["品番一覧", "仕上げ", "部品", "承認", "CNC加工", "フェーズ", "ToDo"];
+  const icons = ["📋", "🎨", "🔩", "✅", "🔧", "📊", "🚩"];
+
+  // Collect all ToDo items across tabs
+  const isTodo = (note: string) => note.toLowerCase().includes("todo");
+  const todoItems: { tab: string; item: string; label: string; note: string }[] = [
+    ...finish.filter(f => isTodo(f.note)).map(f => ({ tab: "仕上げ", item: f.item, label: `${f.part}（${f.finish}）`, note: f.note })),
+    ...parts.filter(p => isTodo(p.note)).map(p => ({ tab: "部品", item: p.item, label: `${p.part}（${p.material}）`, note: p.note })),
+    ...approval.filter(a => isTodo(a.note)).map(a => ({ tab: "承認", item: a.item, label: a.category, note: a.note })),
+    ...cnc.filter(c => isTodo(c.cncNote || "")).map(c => ({ tab: "CNC", item: c.item, label: c.part, note: c.cncNote || "" })),
+  ];
 
   const fltFinish = filter === "ALL" ? finish : finish.filter(d => d.item === filter);
   const fltParts = filter === "ALL" ? parts : parts.filter(d => d.item === filter);
@@ -217,7 +226,7 @@ function App() {
         </div>
         <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
           {tabs.map((t, i) => <Tab key={i} label={`${icons[i]} ${t}`} active={tab === i} onClick={() => setTab(i)}
-            count={i === 1 ? `${completedFinish}/${finish.length}` : i === 3 ? `${completedApproval}/${approval.length}` : i === 4 ? `${completedCnc}/${cnc.length}` : undefined} />)}
+            count={i === 1 ? `${completedFinish}/${finish.length}` : i === 3 ? `${completedApproval}/${approval.length}` : i === 4 ? `${completedCnc}/${cnc.length}` : i === 6 ? `${todoItems.length}` : undefined} />)}
         </div>
       </div>
 
@@ -281,7 +290,7 @@ function App() {
                 {fltFinish.map(f => {
                   const gi = finish.indexOf(f);
                   return (
-                    <tr key={gi}>
+                    <tr key={gi} style={{ background: isTodo(f.note) ? "#fef2f2" : "transparent" }}>
                       {!readOnly && <Td><RowActions onDel={() => delRow(setFinish, gi)} onUp={() => moveRow(setFinish, gi, -1)} onDown={() => moveRow(setFinish, gi, 1)} /></Td>}
                       <Td><ImageCell imageUrl={f.imageUrl} onChangeUrl={v => updFinish(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
                       <Td hl><EditCell value={f.item} onChange={v => updFinish(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
@@ -313,7 +322,7 @@ function App() {
                 {fltParts.map(p => {
                   const gi = parts.indexOf(p);
                   return (
-                    <tr key={gi} style={{ background: p.note.includes("別途") ? "#fef2f210" : "transparent" }}>
+                    <tr key={gi} style={{ background: isTodo(p.note) ? "#fef2f2" : p.note.includes("別途") ? "#fef2f210" : "transparent" }}>
                       {!readOnly && <Td><RowActions onDel={() => delRow(setParts, gi)} onUp={() => moveRow(setParts, gi, -1)} onDown={() => moveRow(setParts, gi, 1)} /></Td>}
                       <Td><ImageCell imageUrl={p.imageUrl} onChangeUrl={v => updParts(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
                       <Td hl><EditCell value={p.item} onChange={v => updParts(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
@@ -377,7 +386,7 @@ function App() {
                   const gi = approval.indexOf(a);
                   const warn = a.note.includes("指示") || a.note.includes("確認") || a.note.includes("別途");
                   return (
-                    <tr key={gi} style={{ background: warn && a.status !== "承認済" ? "#fef3c7" : "transparent" }}>
+                    <tr key={gi} style={{ background: isTodo(a.note) ? "#fef2f2" : warn && a.status !== "承認済" ? "#fef3c7" : "transparent" }}>
                       {!readOnly && <Td><RowActions onDel={() => delRow(setApproval, gi)} onUp={() => moveRow(setApproval, gi, -1)} onDown={() => moveRow(setApproval, gi, 1)} /></Td>}
                       <Td hl><EditCell value={a.item} onChange={v => updApproval(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
                       <Td><EditCell value={a.category} onChange={v => updApproval(gi, "category", v)} placeholder="項目" width={100} readOnly={readOnly} /></Td>
@@ -409,7 +418,7 @@ function App() {
                 {fltCnc.map(c => {
                   const gi = cnc.indexOf(c);
                   return (
-                    <tr key={gi}>
+                    <tr key={gi} style={{ background: isTodo(c.cncNote || "") ? "#fef2f2" : "transparent" }}>
                       {!readOnly && <Td><RowActions onDel={() => delRow(setCnc, gi)} onUp={() => moveRow(setCnc, gi, -1)} onDown={() => moveRow(setCnc, gi, 1)} /></Td>}
                       <Td><ImageCell imageUrl={c.imageUrl} onChangeUrl={v => updCnc(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
                       <Td hl><EditCell value={c.item} onChange={v => updCnc(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
@@ -463,11 +472,39 @@ function App() {
                     <strong style={{ color: "#3b82f6" }}>バッジ</strong> → クリックでステータス切替（未着手→進行中→完了→保留）<br />
                     <strong style={{ color: "#3b82f6" }}>テキスト欄</strong> → クリックで編集、Enter確定、Escキャンセル<br />
                     <strong style={{ color: "#3b82f6" }}>品番フィルタ</strong> → 上部ボタンで品番絞り込み（全タブ連動）<br />
-                    <strong style={{ color: "#3b82f6" }}>×ボタン</strong> → 行の削除 / <strong style={{ color: "#3b82f6" }}>+ボタン</strong> → 行の追加
+                    <strong style={{ color: "#3b82f6" }}>×ボタン</strong> → 行の削除 / <strong style={{ color: "#3b82f6" }}>+ボタン</strong> → 行の追加<br />
+                    <strong style={{ color: "#ef4444" }}>ToDo</strong> → 備考に「ToDo」と入力すると赤くハイライト、ToDoタブに集約
                   </>
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Tab 6: ToDo */}
+        {tab === 6 && (
+          <div>
+            {todoItems.length === 0 ? (
+              <div style={{ padding: "40px 20px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+                ToDoはありません。各タブの備考欄に「ToDo」を含めると、ここに表示されます。
+              </div>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr>
+                  <Th>タブ</Th><Th>品番</Th><Th>対象</Th><Th>備考</Th>
+                </tr></thead>
+                <tbody>
+                  {todoItems.map((t, i) => (
+                    <tr key={i} style={{ background: "#fef2f2" }}>
+                      <Td><span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>{t.tab}</span></Td>
+                      <Td hl>{t.item}</Td>
+                      <Td>{t.label}</Td>
+                      <Td><span style={{ color: "#dc2626", fontWeight: 500, fontSize: 12 }}>{t.note}</span></Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
       </div>
