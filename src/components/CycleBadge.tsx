@@ -20,6 +20,6 @@ export function CycleBadge({ value, options, colors, onChange, readOnly }: Cycle
       cursor: readOnly ? "default" : "pointer",
       transition: "all 0.15s", lineHeight: "18px", whiteSpace: "nowrap",
       opacity: readOnly ? 0.8 : 1,
-    }}>{value}</button>
+    }}>{value || "—"}</button>
   );
 }

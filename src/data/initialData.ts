@@ -42,7 +42,20 @@ export interface PartRow {
   assignee?: string;
   link?: string;
   imageUrl?: string;
+  companyProcure?: string;
+  companyProcess?: string;
+  companyProduce?: string;
 }
+
+export const COMPANIES = ["", "VUILD", "KOKKOK", "BETRUST", "Be,想空間", "サンオンクラフト"] as const;
+export const COMPANY_COLORS: Record<string, string> = {
+  "": "#94a3b8",
+  "VUILD": "#3b82f6",
+  "KOKKOK": "#f97316",
+  "BETRUST": "#8b5cf6",
+  "Be,想空間": "#10b981",
+  "サンオンクラフト": "#ef4444",
+};
 
 export interface ApprovalRow {
   item: string;

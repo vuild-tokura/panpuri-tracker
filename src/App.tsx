@@ -8,6 +8,7 @@ import {
   PHASES, PHASE_COLORS, STATUS, STATUS_COLORS,
   PROCURE, PROCURE_COLORS, SAMPLE, SAMPLE_COLORS,
   APPROVE, APPROVE_COLORS,
+  COMPANIES, COMPANY_COLORS,
   initItems, initFinish, initParts, initApproval, makeCnc, initPhase,
 } from "./data/initialData";
 import type { Item, FinishRow, PartRow, ApprovalRow, CncRow, PhaseRow } from "./data/initialData";
@@ -306,7 +307,7 @@ function App() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr>
                 {!readOnly && <Th w="30px">{""}</Th>}
-                <Th>画像</Th><Th>品番</Th><Th>部品名</Th><Th>素材</Th><Th>板厚</Th><Th>数量</Th><Th>CNC</Th><Th>調達</Th><Th>リンク</Th><Th>担当</Th><Th>備考</Th>
+                <Th>画像</Th><Th>品番</Th><Th>部品名</Th><Th>素材</Th><Th>板厚</Th><Th>数量</Th><Th>CNC</Th><Th>調達状況</Th><Th>調達先</Th><Th>加工先</Th><Th>制作先</Th><Th>リンク</Th><Th>備考</Th>
               </tr></thead>
               <tbody>
                 {fltParts.map(p => {
@@ -331,6 +332,9 @@ function App() {
                         )}
                       </Td>
                       <Td><CycleBadge value={p.procure} options={PROCURE} colors={PROCURE_COLORS} onChange={v => updParts(gi, "procure", v)} readOnly={readOnly} /></Td>
+                      <Td><CycleBadge value={p.companyProcure || ""} options={COMPANIES} colors={COMPANY_COLORS} onChange={v => updParts(gi, "companyProcure", v)} readOnly={readOnly} /></Td>
+                      <Td><CycleBadge value={p.companyProcess || ""} options={COMPANIES} colors={COMPANY_COLORS} onChange={v => updParts(gi, "companyProcess", v)} readOnly={readOnly} /></Td>
+                      <Td><CycleBadge value={p.companyProduce || ""} options={COMPANIES} colors={COMPANY_COLORS} onChange={v => updParts(gi, "companyProduce", v)} readOnly={readOnly} /></Td>
                       <Td>
                         {p.link ? (
                           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -345,7 +349,6 @@ function App() {
                           )
                         )}
                       </Td>
-                      <Td><EditCell value={p.assignee || ""} onChange={v => updParts(gi, "assignee", v)} placeholder="担当" width={60} readOnly={readOnly} /></Td>
                       <Td><EditCell value={p.note} onChange={v => updParts(gi, "note", v)} placeholder="備考" width={100} readOnly={readOnly} /></Td>
                     </tr>
                   );
