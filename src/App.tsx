@@ -24,6 +24,21 @@ const delBtnStyle: React.CSSProperties = {
   lineHeight: 1,
 };
 
+const moveBtnStyle: React.CSSProperties = {
+  padding: "0 4px", border: "none", background: "transparent",
+  color: "#94a3b8", fontSize: 11, cursor: "pointer", lineHeight: 1,
+};
+
+function RowActions({ onDel, onUp, onDown }: { onDel: () => void; onUp: () => void; onDown: () => void }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+      <button onClick={onUp} style={moveBtnStyle} title="上に移動">▲</button>
+      <button onClick={onDel} style={delBtnStyle} title="削除">×</button>
+      <button onClick={onDown} style={moveBtnStyle} title="下に移動">▼</button>
+    </div>
+  );
+}
+
 function App() {
   const readOnly = new URLSearchParams(window.location.search).get("mode") === "view";
 
@@ -58,6 +73,16 @@ function App() {
   const delRow = <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>, gi: number) => {
     if (!confirm("この行を削除しますか？")) return;
     setter(p => p.filter((_, j) => j !== gi));
+  };
+
+  const moveRow = <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>, gi: number, dir: -1 | 1) => {
+    setter(p => {
+      const next = [...p];
+      const ti = gi + dir;
+      if (ti < 0 || ti >= next.length) return p;
+      [next[gi], next[ti]] = [next[ti], next[gi]];
+      return next;
+    });
   };
 
   // Add row helpers
@@ -132,16 +157,6 @@ function App() {
     e.target.value = "";
   };
 
-  const handleReset = () => {
-    if (!confirm("すべてのデータを初期値にリセットしますか？")) return;
-    setItems(initItems);
-    setFinish(initFinish);
-    setParts(initParts);
-    setApproval(initApproval);
-    setCnc(makeCnc(initParts));
-    setPhase(initPhase);
-  };
-
   const handleCopyViewUrl = () => {
     const url = window.location.origin + window.location.pathname + "?mode=view";
     navigator.clipboard.writeText(url);
@@ -190,7 +205,6 @@ function App() {
               <button onClick={handleExport} style={toolBtnStyle}>JSON出力</button>
               <button onClick={() => importRef.current?.click()} style={toolBtnStyle}>JSON読込</button>
               <input ref={importRef} type="file" accept=".json" onChange={handleImport} style={{ display: "none" }} />
-              <button onClick={handleReset} style={{ ...toolBtnStyle, color: "#ef4444", borderColor: "#fca5a5" }}>リセット</button>
             </div>
           )}
         </div>
@@ -226,7 +240,7 @@ function App() {
                   const curPhase = PHASES.find(p => ph?.phases[p] === "進行中") || PHASES.find(p => ph?.phases[p] === "未着手") || "納品";
                   return (
                     <tr key={it.id}>
-                      {!readOnly && <Td><button onClick={() => delItem(gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      {!readOnly && <Td><RowActions onDel={() => delItem(gi)} onUp={() => { moveRow(setItems, gi, -1); moveRow(setPhase, gi, -1); }} onDown={() => { moveRow(setItems, gi, 1); moveRow(setPhase, gi, 1); }} /></Td>}
                       <Td><ImageCell imageUrl={it.imageUrl} onChangeUrl={v => updItem(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
                       <Td hl><EditCell value={it.id} onChange={v => {
                         const oldId = it.id;
@@ -267,7 +281,7 @@ function App() {
                   const gi = finish.indexOf(f);
                   return (
                     <tr key={gi}>
-                      {!readOnly && <Td><button onClick={() => delRow(setFinish, gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      {!readOnly && <Td><RowActions onDel={() => delRow(setFinish, gi)} onUp={() => moveRow(setFinish, gi, -1)} onDown={() => moveRow(setFinish, gi, 1)} /></Td>}
                       <Td><ImageCell imageUrl={f.imageUrl} onChangeUrl={v => updFinish(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
                       <Td hl><EditCell value={f.item} onChange={v => updFinish(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
                       <Td><EditCell value={f.part} onChange={v => updFinish(gi, "part", v)} placeholder="部位" width={80} readOnly={readOnly} /></Td>
@@ -299,7 +313,7 @@ function App() {
                   const gi = parts.indexOf(p);
                   return (
                     <tr key={gi} style={{ background: p.note.includes("別途") ? "#fef2f210" : "transparent" }}>
-                      {!readOnly && <Td><button onClick={() => delRow(setParts, gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      {!readOnly && <Td><RowActions onDel={() => delRow(setParts, gi)} onUp={() => moveRow(setParts, gi, -1)} onDown={() => moveRow(setParts, gi, 1)} /></Td>}
                       <Td><ImageCell imageUrl={p.imageUrl} onChangeUrl={v => updParts(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
                       <Td hl><EditCell value={p.item} onChange={v => updParts(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
                       <Td><EditCell value={p.part} onChange={v => updParts(gi, "part", v)} placeholder="部品名" width={100} readOnly={readOnly} /></Td>
@@ -361,7 +375,7 @@ function App() {
                   const warn = a.note.includes("指示") || a.note.includes("確認") || a.note.includes("別途");
                   return (
                     <tr key={gi} style={{ background: warn && a.status !== "承認済" ? "#fef3c7" : "transparent" }}>
-                      {!readOnly && <Td><button onClick={() => delRow(setApproval, gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      {!readOnly && <Td><RowActions onDel={() => delRow(setApproval, gi)} onUp={() => moveRow(setApproval, gi, -1)} onDown={() => moveRow(setApproval, gi, 1)} /></Td>}
                       <Td hl><EditCell value={a.item} onChange={v => updApproval(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
                       <Td><EditCell value={a.category} onChange={v => updApproval(gi, "category", v)} placeholder="項目" width={100} readOnly={readOnly} /></Td>
                       <Td><CycleBadge value={a.status} options={APPROVE} colors={APPROVE_COLORS} onChange={v => updApproval(gi, "status", v)} readOnly={readOnly} /></Td>
@@ -393,7 +407,7 @@ function App() {
                   const gi = cnc.indexOf(c);
                   return (
                     <tr key={gi}>
-                      {!readOnly && <Td><button onClick={() => delRow(setCnc, gi)} style={delBtnStyle} title="削除">×</button></Td>}
+                      {!readOnly && <Td><RowActions onDel={() => delRow(setCnc, gi)} onUp={() => moveRow(setCnc, gi, -1)} onDown={() => moveRow(setCnc, gi, 1)} /></Td>}
                       <Td><ImageCell imageUrl={c.imageUrl} onChangeUrl={v => updCnc(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
                       <Td hl><EditCell value={c.item} onChange={v => updCnc(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
                       <Td><EditCell value={c.part} onChange={v => updCnc(gi, "part", v)} placeholder="部品名" width={100} readOnly={readOnly} /></Td>
