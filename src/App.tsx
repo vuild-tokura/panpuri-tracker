@@ -161,7 +161,7 @@ function App() {
           padding: 20, overflow: "auto",
         }}>
           <img src={modalImg} alt="" onClick={e => e.stopPropagation()} style={{
-            maxWidth: "95vw", maxHeight: "95vh", borderRadius: 8,
+            width: "95vw", height: "95vh", objectFit: "contain", borderRadius: 8,
             boxShadow: "0 8px 32px rgba(0,0,0,0.5)", background: "#fff", cursor: "default",
           }} />
           <button onClick={() => setModalImg(null)} style={{

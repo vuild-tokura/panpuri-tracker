@@ -72,7 +72,7 @@ export function ImageCell({ imageUrl, onChangeUrl, onClickImage, readOnly }: Ima
           onDragOver={!readOnly ? onDragOver : undefined}
           onDragLeave={() => setDragging(false)}
           style={{
-            width: 80, height: 80, objectFit: "cover", borderRadius: 4,
+            width: 120, height: 120, objectFit: "cover", borderRadius: 4,
             cursor: "zoom-in", border: dragging ? "2px solid #3b82f6" : "1px solid #e2e8f0",
           }}
         />
@@ -105,7 +105,7 @@ export function ImageCell({ imageUrl, onChangeUrl, onClickImage, readOnly }: Ima
         onDragOver={onDragOver}
         onDragLeave={() => setDragging(false)}
         style={{
-          width: 80, height: 80, borderRadius: 4, cursor: "pointer",
+          width: 120, height: 120, borderRadius: 4, cursor: "pointer",
           border: dragging ? "2px solid #3b82f6" : "1px dashed #cbd5e1",
           background: dragging ? "#eff6ff" : "#f8fafc",
           display: "flex", alignItems: "center", justifyContent: "center",
