@@ -156,10 +156,20 @@ function App() {
       {/* Image modal */}
       {modalImg && (
         <div onClick={() => setModalImg(null)} style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000,
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 1000,
           display: "flex", alignItems: "center", justifyContent: "center", cursor: "zoom-out",
+          padding: 20, overflow: "auto",
         }}>
-          <img src={modalImg} alt="" style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 8, boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }} />
+          <img src={modalImg} alt="" onClick={e => e.stopPropagation()} style={{
+            maxWidth: "95vw", maxHeight: "95vh", borderRadius: 8,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)", background: "#fff", cursor: "default",
+          }} />
+          <button onClick={() => setModalImg(null)} style={{
+            position: "fixed", top: 16, right: 16, width: 36, height: 36, borderRadius: "50%",
+            border: "none", background: "rgba(255,255,255,0.9)", color: "#334155",
+            fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+          }}>×</button>
         </div>
       )}
 

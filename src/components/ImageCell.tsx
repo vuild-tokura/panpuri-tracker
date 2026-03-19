@@ -7,7 +7,7 @@ interface ImageCellProps {
   readOnly?: boolean;
 }
 
-function readFileAsDataUrl(file: File, maxWidth = 400): Promise<string> {
+function readFileAsDataUrl(file: File, maxWidth = 1600): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -19,7 +19,7 @@ function readFileAsDataUrl(file: File, maxWidth = 400): Promise<string> {
         canvas.height = img.height * scale;
         const ctx = canvas.getContext("2d")!;
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.7));
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
       };
       img.onerror = reject;
       img.src = reader.result as string;
