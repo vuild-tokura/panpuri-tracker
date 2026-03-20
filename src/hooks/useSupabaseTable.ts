@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
 type ColumnMap = Record<string, string>; // camelCase -> snake_case
@@ -31,7 +31,7 @@ interface UseSupabaseTableOptions<T> {
   columnMap?: ColumnMap; // camelCase keys -> snake_case columns
 }
 
-export function useSupabaseTable<T extends Record<string, unknown>>({
+export function useSupabaseTable<T extends object>({
   table,
   localStorageKey,
   initialValue,
