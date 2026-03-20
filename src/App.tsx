@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useLocalStorage } from "./hooks/useLocalStorage";
+import { useSupabaseTable } from "./hooks/useSupabaseTable";
 import { CycleBadge } from "./components/CycleBadge";
 import { EditCell } from "./components/EditCell";
 import { Th, Td, Tab } from "./components/TableComponents";
@@ -45,12 +45,41 @@ function App() {
 
   const [tab, setTab] = useState(0);
   const [filter, setFilter] = useState("ALL");
-  const [items, setItems] = useLocalStorage<Item[]>("panpuri-items", initItems);
-  const [finish, setFinish] = useLocalStorage<FinishRow[]>("panpuri-finish", initFinish);
-  const [parts, setParts] = useLocalStorage<PartRow[]>("panpuri-parts", initParts);
-  const [approval, setApproval] = useLocalStorage<ApprovalRow[]>("panpuri-approval", initApproval);
-  const [cnc, setCnc] = useLocalStorage<CncRow[]>("panpuri-cnc", makeCnc(initParts));
-  const [phase, setPhase] = useLocalStorage<PhaseRow[]>("panpuri-phase", initPhase);
+  const [items, setItems, loadingItems] = useSupabaseTable<Item>({
+    table: "items",
+    localStorageKey: "panpuri-items",
+    initialValue: initItems,
+    columnMap: { id: "item_id", imageUrl: "image_url" },
+  });
+  const [finish, setFinish] = useSupabaseTable<FinishRow>({
+    table: "finish",
+    localStorageKey: "panpuri-finish",
+    initialValue: initFinish,
+    columnMap: { imageUrl: "image_url" },
+  });
+  const [parts, setParts] = useSupabaseTable<PartRow>({
+    table: "parts",
+    localStorageKey: "panpuri-parts",
+    initialValue: initParts,
+    columnMap: { cncReq: "cnc_req", imageUrl: "image_url", companyProcure: "company_procure", companyProcess: "company_process", companyProduce: "company_produce" },
+  });
+  const [approval, setApproval] = useSupabaseTable<ApprovalRow>({
+    table: "approval",
+    localStorageKey: "panpuri-approval",
+    initialValue: initApproval,
+  });
+  const [cnc, setCnc] = useSupabaseTable<CncRow>({
+    table: "cnc",
+    localStorageKey: "panpuri-cnc",
+    initialValue: makeCnc(initParts),
+    columnMap: { cncReq: "cnc_req", machineOp: "machine_op", dataStatus: "data_status", cncStatus: "cnc_status", cncNote: "cnc_note", imageUrl: "image_url" },
+  });
+  const [phase, setPhase] = useSupabaseTable<PhaseRow>({
+    table: "phase",
+    localStorageKey: "panpuri-phase",
+    initialValue: initPhase,
+    columnMap: { id: "item_id" },
+  });
 
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -178,6 +207,14 @@ function App() {
 
   return (
     <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif", color: "#1e293b", minHeight: "100vh", background: "#f8fafc" }}>
+      {loadingItems && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 2000,
+          height: 3, background: "linear-gradient(90deg, #3b82f6, #8b5cf6, #3b82f6)",
+          backgroundSize: "200% 100%",
+          animation: "shimmer 1.5s infinite",
+        }} />
+      )}
       {/* Image modal */}
       {modalImg && (
         <div onClick={() => setModalImg(null)} style={{
