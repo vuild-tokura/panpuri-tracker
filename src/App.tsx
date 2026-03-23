@@ -4,14 +4,16 @@ import { CycleBadge } from "./components/CycleBadge";
 import { EditCell } from "./components/EditCell";
 import { Th, Td, Tab } from "./components/TableComponents";
 import { ImageCell } from "./components/ImageCell";
+import { SimplePhaseTab } from "./components/SimplePhaseTab";
 import {
-  PHASES, PHASE_COLORS, STATUS, STATUS_COLORS,
+  STATUS, STATUS_COLORS,
   PROCURE, PROCURE_COLORS, SAMPLE, SAMPLE_COLORS,
   APPROVE, APPROVE_COLORS,
   COMPANIES, COMPANY_COLORS,
   initItems, initFinish, initParts, initApproval, makeCnc, initPhase,
+  initSimplePhase, initGantt,
 } from "./data/initialData";
-import type { Item, FinishRow, PartRow, ApprovalRow, CncRow, PhaseRow } from "./data/initialData";
+import type { Item, FinishRow, PartRow, ApprovalRow, CncRow, PhaseRow, SimplePhaseRow, GanttRow } from "./data/initialData";
 
 const addBtnStyle: React.CSSProperties = {
   padding: "4px 12px", borderRadius: 4, border: "1px dashed #94a3b8",
@@ -49,42 +51,73 @@ function App() {
     table: "items",
     localStorageKey: "panpuri-items",
     initialValue: initItems,
-    columnMap: { id: "item_id", imageUrl: "image_url" },
+    columnMap: { id: "item_id", imageUrl: "image_url", updatedAt: "updated_at" },
   });
   const [finish, setFinish] = useSupabaseTable<FinishRow>({
     table: "finish",
     localStorageKey: "panpuri-finish",
     initialValue: initFinish,
-    columnMap: { imageUrl: "image_url" },
+    columnMap: { imageUrl: "image_url", updatedAt: "updated_at" },
   });
   const [parts, setParts] = useSupabaseTable<PartRow>({
     table: "parts",
     localStorageKey: "panpuri-parts",
     initialValue: initParts,
-    columnMap: { cncReq: "cnc_req", imageUrl: "image_url", companyProcure: "company_procure", companyProcess: "company_process", companyProduce: "company_produce" },
+    columnMap: { cncReq: "cnc_req", imageUrl: "image_url", companyProcure: "company_procure", companyProcess: "company_process", companyProduce: "company_produce", updatedAt: "updated_at" },
   });
   const [approval, setApproval] = useSupabaseTable<ApprovalRow>({
     table: "approval",
     localStorageKey: "panpuri-approval",
     initialValue: initApproval,
+    columnMap: { updatedAt: "updated_at" },
   });
   const [cnc, setCnc] = useSupabaseTable<CncRow>({
     table: "cnc",
     localStorageKey: "panpuri-cnc",
     initialValue: makeCnc(initParts),
-    columnMap: { cncReq: "cnc_req", machineOp: "machine_op", dataStatus: "data_status", cncStatus: "cnc_status", cncNote: "cnc_note", imageUrl: "image_url" },
+    columnMap: { cncReq: "cnc_req", machineOp: "machine_op", dataStatus: "data_status", cncStatus: "cnc_status", cncNote: "cnc_note", imageUrl: "image_url", updatedAt: "updated_at" },
   });
   const [phase, setPhase] = useSupabaseTable<PhaseRow>({
     table: "phase",
     localStorageKey: "panpuri-phase",
     initialValue: initPhase,
-    columnMap: { id: "item_id" },
+    columnMap: { id: "item_id", updatedAt: "updated_at" },
+  });
+  const [gantt, setGantt] = useSupabaseTable<GanttRow>({
+    table: "gantt",
+    localStorageKey: "panpuri-gantt",
+    initialValue: initGantt(initItems),
+    columnMap: { startDate: "start_date", endDate: "end_date", updatedAt: "updated_at" },
+  });
+  const [metalwork, setMetalwork] = useSupabaseTable<SimplePhaseRow>({
+    table: "metalwork",
+    localStorageKey: "panpuri-metalwork",
+    initialValue: initSimplePhase(initItems),
+    columnMap: { updatedAt: "updated_at" },
+  });
+  const [assembly, setAssembly] = useSupabaseTable<SimplePhaseRow>({
+    table: "assembly",
+    localStorageKey: "panpuri-assembly",
+    initialValue: initSimplePhase(initItems),
+    columnMap: { updatedAt: "updated_at" },
+  });
+  const [inspection, setInspection] = useSupabaseTable<SimplePhaseRow>({
+    table: "inspection",
+    localStorageKey: "panpuri-inspection",
+    initialValue: initSimplePhase(initItems),
+    columnMap: { updatedAt: "updated_at" },
+  });
+  const [delivery, setDelivery] = useSupabaseTable<SimplePhaseRow>({
+    table: "delivery",
+    localStorageKey: "panpuri-delivery",
+    initialValue: initSimplePhase(initItems),
+    columnMap: { updatedAt: "updated_at" },
   });
 
   const importRef = useRef<HTMLInputElement>(null);
 
-  const tabs = ["品番一覧", "仕上げ", "部品", "承認", "CNC加工", "フェーズ", "ToDo"];
-  const icons = ["📋", "🎨", "🔩", "✅", "🔧", "📊", "🚩"];
+  const tabs = ["ガント", "材料調達", "木部CNC加工", "仕上げ", "金属加工", "組立", "検品", "納品", "ToDo"];
+  const icons = ["📊", "📦", "🔧", "🎨", "⚙️", "🔨", "🔍", "🚚", "🚩"];
 
   // Collect all ToDo items across tabs
   const isTodo = (note: string) => note.toLowerCase().includes("todo");
@@ -99,15 +132,23 @@ function App() {
   const fltParts = filter === "ALL" ? parts : parts.filter(d => d.item === filter);
   const fltApproval = filter === "ALL" ? approval : approval.filter(d => d.item === filter);
   const fltCnc = filter === "ALL" ? cnc : cnc.filter(d => d.item === filter);
-  const fltPhase = filter === "ALL" ? phase : phase.filter(d => d.id === filter);
-  const fltItems = filter === "ALL" ? items : items.filter(d => d.id === filter);
+  const fltMetalwork = filter === "ALL" ? metalwork : metalwork.filter(d => d.item === filter);
+  const fltAssembly = filter === "ALL" ? assembly : assembly.filter(d => d.item === filter);
+  const fltInspection = filter === "ALL" ? inspection : inspection.filter(d => d.item === filter);
+  const fltDelivery = filter === "ALL" ? delivery : delivery.filter(d => d.item === filter);
 
-  const updFinish = (gi: number, k: string, v: string) => setFinish(p => p.map((r, j) => j === gi ? { ...r, [k]: v } : r));
-  const updParts = (gi: number, k: string, v: string) => setParts(p => p.map((r, j) => j === gi ? { ...r, [k]: v } : r));
-  const updApproval = (gi: number, k: string, v: string) => setApproval(p => p.map((r, j) => j === gi ? { ...r, [k]: v } : r));
-  const updCnc = (gi: number, k: string, v: string) => setCnc(p => p.map((r, j) => j === gi ? { ...r, [k]: v } : r));
-  const updPhase = (id: string, ph: string, v: string) => setPhase(p => p.map(r => r.id === id ? { ...r, phases: { ...r.phases, [ph]: v } } : r));
-  const updItem = (gi: number, k: string, v: string | number) => setItems(p => p.map((r, j) => j === gi ? { ...r, [k]: v } : r));
+  const updFinish = (gi: number, k: string, v: string) => setFinish(p => p.map((r, j) => j === gi ? { ...r, [k]: v, updatedAt: new Date().toISOString() } : r));
+  const updParts = (gi: number, k: string, v: string) => setParts(p => p.map((r, j) => j === gi ? { ...r, [k]: v, updatedAt: new Date().toISOString() } : r));
+  const updApproval = (gi: number, k: string, v: string) => setApproval(p => p.map((r, j) => j === gi ? { ...r, [k]: v, updatedAt: new Date().toISOString() } : r));
+  const updCnc = (gi: number, k: string, v: string) => setCnc(p => p.map((r, j) => j === gi ? { ...r, [k]: v, updatedAt: new Date().toISOString() } : r));
+
+  const updSimple = (setter: React.Dispatch<React.SetStateAction<SimplePhaseRow[]>>, gi: number, k: string, v: string) =>
+    setter(p => p.map((r, j) => j === gi ? { ...r, [k]: v, updatedAt: new Date().toISOString() } : r));
+
+  const addSimple = (setter: React.Dispatch<React.SetStateAction<SimplePhaseRow[]>>) => {
+    const itemId = filter !== "ALL" ? filter : (items[0]?.id || "");
+    setter(p => [...p, { item: itemId, status: "未着手", company: "", note: "" }]);
+  };
 
   const delRow = <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>, gi: number) => {
     if (!confirm("この行を削除しますか？")) return;
@@ -122,24 +163,6 @@ function App() {
       [next[gi], next[ti]] = [next[ti], next[gi]];
       return next;
     });
-  };
-
-  // Add row helpers
-  const addItem = () => {
-    const id = `NEW-${String(items.length + 1).padStart(2, "0")}`;
-    setItems(p => [...p, { id, name: "", qty: 1, dims: "", page: "" }]);
-    setPhase(p => [...p, { id, name: "", qty: 1, phases: Object.fromEntries(PHASES.map(ph => [ph, "未着手"])) }]);
-  };
-  const delItem = (gi: number) => {
-    const it = items[gi];
-    if (!confirm(`${it.id}（${it.name || "名称未設定"}）を削除しますか？関連する仕上げ・部品・承認・CNC・フェーズも削除されます。`)) return;
-    setItems(p => p.filter((_, j) => j !== gi));
-    setFinish(p => p.filter(r => r.item !== it.id));
-    setParts(p => p.filter(r => r.item !== it.id));
-    setApproval(p => p.filter(r => r.item !== it.id));
-    setCnc(p => p.filter(r => r.item !== it.id));
-    setPhase(p => p.filter(r => r.id !== it.id));
-    if (filter === it.id) setFilter("ALL");
   };
 
   const addFinish = () => {
@@ -164,7 +187,11 @@ function App() {
   const completedCnc = cnc.filter(c => c.cncStatus === "完了").length;
 
   const handleExport = () => {
-    const data = { items, finish, parts, approval, cnc, phase, exportedAt: new Date().toISOString() };
+    const data = {
+      items, finish, parts, approval, cnc, phase,
+      gantt, metalwork, assembly, inspection, delivery,
+      exportedAt: new Date().toISOString(),
+    };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -187,6 +214,11 @@ function App() {
         if (data.approval) setApproval(data.approval);
         if (data.cnc) setCnc(data.cnc);
         if (data.phase) setPhase(data.phase);
+        if (data.gantt) setGantt(data.gantt);
+        if (data.metalwork) setMetalwork(data.metalwork);
+        if (data.assembly) setAssembly(data.assembly);
+        if (data.inspection) setInspection(data.inspection);
+        if (data.delivery) setDelivery(data.delivery);
         alert("データをインポートしました");
       } catch {
         alert("JSONファイルの読み込みに失敗しました");
@@ -201,6 +233,25 @@ function App() {
     navigator.clipboard.writeText(url);
     alert("閲覧用URLをコピーしました");
   };
+
+  const allUpdates = [
+    ...items.map(r => r.updatedAt),
+    ...finish.map(r => r.updatedAt),
+    ...parts.map(r => r.updatedAt),
+    ...approval.map(r => r.updatedAt),
+    ...cnc.map(r => r.updatedAt),
+    ...gantt.map(r => r.updatedAt),
+    ...metalwork.map(r => r.updatedAt),
+    ...assembly.map(r => r.updatedAt),
+    ...inspection.map(r => r.updatedAt),
+    ...delivery.map(r => r.updatedAt),
+  ].filter(Boolean) as string[];
+  const lastUpdated = allUpdates.length > 0
+    ? new Date(allUpdates.sort().reverse()[0]).toLocaleString("ja-JP")
+    : null;
+
+  // Parts procure count for tab counter
+  const procuredParts = parts.filter(p => p.procure === "入荷済").length;
 
   // Image modal
   const [modalImg, setModalImg] = useState<string | null>(null);
@@ -246,6 +297,11 @@ function App() {
           }}>
             {readOnly ? "閲覧モード" : "編集モード"}
           </span>
+          {lastUpdated && (
+            <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: 8 }}>
+              最終更新: {lastUpdated}
+            </span>
+          )}
           {!readOnly && (
             <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
               <button onClick={handleCopyViewUrl} style={toolBtnStyle}>共有URL</button>
@@ -263,92 +319,18 @@ function App() {
         </div>
         <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
           {tabs.map((t, i) => <Tab key={i} label={`${icons[i]} ${t}`} active={tab === i} onClick={() => setTab(i)}
-            count={i === 1 ? `${completedFinish}/${finish.length}` : i === 3 ? `${completedApproval}/${approval.length}` : i === 4 ? `${completedCnc}/${cnc.length}` : i === 6 ? `${todoItems.length}` : undefined} />)}
+            count={i === 1 ? `${procuredParts}/${parts.length}` : i === 2 ? `${completedCnc}/${cnc.length}` : i === 3 ? `${completedFinish}/${finish.length}` : i === 8 ? `${todoItems.length}` : undefined} />)}
         </div>
       </div>
 
       <div style={{ padding: "12px 16px", overflowX: "auto" }}>
-        {/* Tab 0: 品番一覧 */}
+        {/* Tab 0: ガント */}
         {tab === 0 && (
-          <div>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr>
-                {!readOnly && <Th w="30px">{""}</Th>}
-                <Th>画像</Th><Th>品番</Th><Th>名称</Th><Th>台数</Th><Th>概略寸法</Th><Th>図面</Th><Th>仕上げ進捗</Th><Th>承認進捗</Th><Th>現フェーズ</Th>
-              </tr></thead>
-              <tbody>
-                {fltItems.map(it => {
-                  const gi = items.indexOf(it);
-                  const fc = finish.filter(f => f.item === it.id);
-                  const fd = fc.filter(f => f.status === "完了").length;
-                  const ac = approval.filter(a => a.item === it.id);
-                  const ad = ac.filter(a => a.status === "承認済").length;
-                  const ph = phase.find(p => p.id === it.id);
-                  const curPhase = PHASES.find(p => ph?.phases[p] === "進行中") || PHASES.find(p => ph?.phases[p] === "未着手") || "納品";
-                  return (
-                    <tr key={it.id}>
-                      {!readOnly && <Td><RowActions onDel={() => delItem(gi)} onUp={() => { moveRow(setItems, gi, -1); moveRow(setPhase, gi, -1); }} onDown={() => { moveRow(setItems, gi, 1); moveRow(setPhase, gi, 1); }} /></Td>}
-                      <Td><ImageCell imageUrl={it.imageUrl} onChangeUrl={v => updItem(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
-                      <Td hl><EditCell value={it.id} onChange={v => {
-                        const oldId = it.id;
-                        updItem(gi, "id", v);
-                        setFinish(p => p.map(r => r.item === oldId ? { ...r, item: v } : r));
-                        setParts(p => p.map(r => r.item === oldId ? { ...r, item: v } : r));
-                        setApproval(p => p.map(r => r.item === oldId ? { ...r, item: v } : r));
-                        setCnc(p => p.map(r => r.item === oldId ? { ...r, item: v } : r));
-                        setPhase(p => p.map(r => r.id === oldId ? { ...r, id: v } : r));
-                        if (filter === oldId) setFilter(v);
-                      }} placeholder="品番" width={70} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={it.name} onChange={v => updItem(gi, "name", v)} placeholder="名称" width={140} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={String(it.qty)} onChange={v => updItem(gi, "qty", Number(v) || 0)} placeholder="0" width={30} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={it.dims} onChange={v => updItem(gi, "dims", v)} placeholder="寸法" width={120} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={it.page} onChange={v => updItem(gi, "page", v)} placeholder="P." width={40} readOnly={readOnly} /></Td>
-                      <Td><span style={{ fontSize: 11 }}>{fd}/{fc.length}</span></Td>
-                      <Td><span style={{ fontSize: 11 }}>{ad}/{ac.length}</span></Td>
-                      <Td><span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: (PHASE_COLORS[curPhase] || "#94a3b8") + "20", color: PHASE_COLORS[curPhase] || "#94a3b8" }}>{curPhase}</span></Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {!readOnly && <button onClick={addItem} style={addBtnStyle}>+ 品番を追加</button>}
-          </div>
+          <div>ガント (coming soon)</div>
         )}
 
-        {/* Tab 1: 仕上げ */}
+        {/* Tab 1: 材料調達 (old 部品) */}
         {tab === 1 && (
-          <div>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr>
-                {!readOnly && <Th w="30px">{""}</Th>}
-                <Th>画像</Th><Th>品番</Th><Th>部位</Th><Th>仕上げ仕様</Th><Th>備考</Th><Th>サンプル</Th><Th>ステータス</Th><Th>担当</Th><Th>期限</Th>
-              </tr></thead>
-              <tbody>
-                {fltFinish.map(f => {
-                  const gi = finish.indexOf(f);
-                  return (
-                    <tr key={gi} style={{ background: isTodo(f.note) ? "#fef2f2" : "transparent" }}>
-                      {!readOnly && <Td><RowActions onDel={() => delRow(setFinish, gi)} onUp={() => moveRow(setFinish, gi, -1)} onDown={() => moveRow(setFinish, gi, 1)} /></Td>}
-                      <Td><ImageCell imageUrl={f.imageUrl} onChangeUrl={v => updFinish(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
-                      <Td hl><EditCell value={f.item} onChange={v => updFinish(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={f.part} onChange={v => updFinish(gi, "part", v)} placeholder="部位" width={80} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={f.finish} onChange={v => updFinish(gi, "finish", v)} placeholder="仕上げ" width={140} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={f.note} onChange={v => updFinish(gi, "note", v)} placeholder="備考" width={120} readOnly={readOnly} /></Td>
-                      <Td><CycleBadge value={f.sample} options={SAMPLE} colors={SAMPLE_COLORS} onChange={v => updFinish(gi, "sample", v)} readOnly={readOnly} /></Td>
-                      <Td><CycleBadge value={f.status} options={STATUS} colors={STATUS_COLORS} onChange={v => updFinish(gi, "status", v)} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={f.assignee || ""} onChange={v => updFinish(gi, "assignee", v)} placeholder="担当" width={60} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={f.deadline || ""} onChange={v => updFinish(gi, "deadline", v)} placeholder="MM/DD" width={60} readOnly={readOnly} /></Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {!readOnly && <button onClick={addFinish} style={addBtnStyle}>+ 仕上げ行を追加</button>}
-          </div>
-        )}
-
-        {/* Tab 2: 部品 */}
-        {tab === 2 && (
           <div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr>
@@ -410,41 +392,8 @@ function App() {
           </div>
         )}
 
-        {/* Tab 3: 承認 */}
-        {tab === 3 && (
-          <div>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr>
-                {!readOnly && <Th w="30px">{""}</Th>}
-                <Th>品番</Th><Th>承認項目</Th><Th>ステータス</Th><Th>承認者</Th><Th>承認日</Th><Th>備考</Th>
-              </tr></thead>
-              <tbody>
-                {fltApproval.map(a => {
-                  const gi = approval.indexOf(a);
-                  const warn = a.note.includes("指示") || a.note.includes("確認") || a.note.includes("別途");
-                  return (
-                    <tr key={gi} style={{ background: isTodo(a.note) ? "#fef2f2" : warn && a.status !== "承認済" ? "#fef3c7" : "transparent" }}>
-                      {!readOnly && <Td><RowActions onDel={() => delRow(setApproval, gi)} onUp={() => moveRow(setApproval, gi, -1)} onDown={() => moveRow(setApproval, gi, 1)} /></Td>}
-                      <Td hl><EditCell value={a.item} onChange={v => updApproval(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={a.category} onChange={v => updApproval(gi, "category", v)} placeholder="項目" width={100} readOnly={readOnly} /></Td>
-                      <Td><CycleBadge value={a.status} options={APPROVE} colors={APPROVE_COLORS} onChange={v => updApproval(gi, "status", v)} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={a.approver} onChange={v => updApproval(gi, "approver", v)} placeholder="承認者" width={80} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={a.date} onChange={v => updApproval(gi, "date", v)} placeholder="YYYY/MM/DD" width={90} readOnly={readOnly} /></Td>
-                      <Td><EditCell value={a.note} onChange={v => updApproval(gi, "note", v)} placeholder="備考" width={160} readOnly={readOnly} /></Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {!readOnly && <button onClick={addApproval} style={addBtnStyle}>+ 承認行を追加</button>}
-            <div style={{ marginTop: 10, padding: "6px 10px", background: "#fef3c7", borderRadius: 6, fontSize: 11, color: "#92400e" }}>
-              黄色行 = 図面上の確認依頼事項（未承認）
-            </div>
-          </div>
-        )}
-
-        {/* Tab 4: CNC加工 */}
-        {tab === 4 && (
+        {/* Tab 2: 木部CNC加工 (old CNC加工) */}
+        {tab === 2 && (
           <div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr>
@@ -481,45 +430,83 @@ function App() {
           </div>
         )}
 
-        {/* Tab 5: フェーズ */}
-        {tab === 5 && (
+        {/* Tab 3: 仕上げ + 承認 */}
+        {tab === 3 && (
           <div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr><Th w="70px">品番</Th><Th w="50px">台数</Th>{PHASES.map(p => <Th key={p}>{p}</Th>)}</tr></thead>
+              <thead><tr>
+                {!readOnly && <Th w="30px">{""}</Th>}
+                <Th>画像</Th><Th>品番</Th><Th>部位</Th><Th>仕上げ仕様</Th><Th>備考</Th><Th>サンプル</Th><Th>ステータス</Th><Th>担当</Th><Th>期限</Th>
+              </tr></thead>
               <tbody>
-                {fltPhase.map(ph => (
-                  <tr key={ph.id}>
-                    <Td hl>{ph.id}</Td><Td>{ph.qty}</Td>
-                    {PHASES.map(p => (
-                      <td key={p} style={{ padding: "5px 4px", borderBottom: "1px solid #f1f5f9", textAlign: "center" }}>
-                        <CycleBadge value={ph.phases[p]} options={STATUS} colors={STATUS_COLORS} onChange={v => updPhase(ph.id, p, v)} readOnly={readOnly} />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
+                {fltFinish.map(f => {
+                  const gi = finish.indexOf(f);
+                  return (
+                    <tr key={gi} style={{ background: isTodo(f.note) ? "#fef2f2" : "transparent" }}>
+                      {!readOnly && <Td><RowActions onDel={() => delRow(setFinish, gi)} onUp={() => moveRow(setFinish, gi, -1)} onDown={() => moveRow(setFinish, gi, 1)} /></Td>}
+                      <Td><ImageCell imageUrl={f.imageUrl} onChangeUrl={v => updFinish(gi, "imageUrl", v)} onClickImage={setModalImg} readOnly={readOnly} /></Td>
+                      <Td hl><EditCell value={f.item} onChange={v => updFinish(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={f.part} onChange={v => updFinish(gi, "part", v)} placeholder="部位" width={80} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={f.finish} onChange={v => updFinish(gi, "finish", v)} placeholder="仕上げ" width={140} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={f.note} onChange={v => updFinish(gi, "note", v)} placeholder="備考" width={120} readOnly={readOnly} /></Td>
+                      <Td><CycleBadge value={f.sample} options={SAMPLE} colors={SAMPLE_COLORS} onChange={v => updFinish(gi, "sample", v)} readOnly={readOnly} /></Td>
+                      <Td><CycleBadge value={f.status} options={STATUS} colors={STATUS_COLORS} onChange={v => updFinish(gi, "status", v)} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={f.assignee || ""} onChange={v => updFinish(gi, "assignee", v)} placeholder="担当" width={60} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={f.deadline || ""} onChange={v => updFinish(gi, "deadline", v)} placeholder="MM/DD" width={60} readOnly={readOnly} /></Td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
-            <div style={{ marginTop: 16, padding: "10px 12px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#334155", marginBottom: 8 }}>操作ガイド</div>
-              <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.8 }}>
-                {readOnly ? (
-                  <>このページは閲覧専用です。編集するには管理者にお問い合わせください。</>
-                ) : (
-                  <>
-                    <strong style={{ color: "#3b82f6" }}>バッジ</strong> → クリックでステータス切替（未着手→進行中→完了→保留）<br />
-                    <strong style={{ color: "#3b82f6" }}>テキスト欄</strong> → クリックで編集、Enter確定、Escキャンセル<br />
-                    <strong style={{ color: "#3b82f6" }}>品番フィルタ</strong> → 上部ボタンで品番絞り込み（全タブ連動）<br />
-                    <strong style={{ color: "#3b82f6" }}>×ボタン</strong> → 行の削除 / <strong style={{ color: "#3b82f6" }}>+ボタン</strong> → 行の追加<br />
-                    <strong style={{ color: "#ef4444" }}>ToDo</strong> → 備考に「ToDo」と入力すると赤くハイライト、ToDoタブに集約
-                  </>
-                )}
-              </div>
+            {!readOnly && <button onClick={addFinish} style={addBtnStyle}>+ 仕上げ行を追加</button>}
+
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: "#475569", marginTop: 24, marginBottom: 8, borderTop: "2px solid #e2e8f0", paddingTop: 12 }}>
+              承認状況 ({completedApproval}/{approval.length})
+            </h3>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead><tr>
+                {!readOnly && <Th w="30px">{""}</Th>}
+                <Th>品番</Th><Th>承認項目</Th><Th>ステータス</Th><Th>承認者</Th><Th>承認日</Th><Th>備考</Th>
+              </tr></thead>
+              <tbody>
+                {fltApproval.map(a => {
+                  const gi = approval.indexOf(a);
+                  const warn = a.note.includes("指示") || a.note.includes("確認") || a.note.includes("別途");
+                  return (
+                    <tr key={gi} style={{ background: isTodo(a.note) ? "#fef2f2" : warn && a.status !== "承認済" ? "#fef3c7" : "transparent" }}>
+                      {!readOnly && <Td><RowActions onDel={() => delRow(setApproval, gi)} onUp={() => moveRow(setApproval, gi, -1)} onDown={() => moveRow(setApproval, gi, 1)} /></Td>}
+                      <Td hl><EditCell value={a.item} onChange={v => updApproval(gi, "item", v)} placeholder="品番" width={60} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={a.category} onChange={v => updApproval(gi, "category", v)} placeholder="項目" width={100} readOnly={readOnly} /></Td>
+                      <Td><CycleBadge value={a.status} options={APPROVE} colors={APPROVE_COLORS} onChange={v => updApproval(gi, "status", v)} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={a.approver} onChange={v => updApproval(gi, "approver", v)} placeholder="承認者" width={80} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={a.date} onChange={v => updApproval(gi, "date", v)} placeholder="YYYY/MM/DD" width={90} readOnly={readOnly} /></Td>
+                      <Td><EditCell value={a.note} onChange={v => updApproval(gi, "note", v)} placeholder="備考" width={160} readOnly={readOnly} /></Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {!readOnly && <button onClick={addApproval} style={addBtnStyle}>+ 承認行を追加</button>}
+            <div style={{ marginTop: 10, padding: "6px 10px", background: "#fef3c7", borderRadius: 6, fontSize: 11, color: "#92400e" }}>
+              黄色行 = 図面上の確認依頼事項（未承認）
             </div>
           </div>
         )}
 
-        {/* Tab 6: ToDo */}
-        {tab === 6 && (
+        {/* Tab 4: 金属加工 */}
+        {tab === 4 && <SimplePhaseTab rows={fltMetalwork} onUpdate={(i, k, v) => updSimple(setMetalwork, i, k, v)} onAdd={() => addSimple(setMetalwork)} onDelete={(i) => delRow(setMetalwork, i)} onMove={(i, d) => moveRow(setMetalwork, i, d)} readOnly={readOnly} />}
+
+        {/* Tab 5: 組立 */}
+        {tab === 5 && <SimplePhaseTab rows={fltAssembly} onUpdate={(i, k, v) => updSimple(setAssembly, i, k, v)} onAdd={() => addSimple(setAssembly)} onDelete={(i) => delRow(setAssembly, i)} onMove={(i, d) => moveRow(setAssembly, i, d)} readOnly={readOnly} />}
+
+        {/* Tab 6: 検品 */}
+        {tab === 6 && <SimplePhaseTab rows={fltInspection} onUpdate={(i, k, v) => updSimple(setInspection, i, k, v)} onAdd={() => addSimple(setInspection)} onDelete={(i) => delRow(setInspection, i)} onMove={(i, d) => moveRow(setInspection, i, d)} readOnly={readOnly} />}
+
+        {/* Tab 7: 納品 */}
+        {tab === 7 && <SimplePhaseTab rows={fltDelivery} onUpdate={(i, k, v) => updSimple(setDelivery, i, k, v)} onAdd={() => addSimple(setDelivery)} onDelete={(i) => delRow(setDelivery, i)} onMove={(i, d) => moveRow(setDelivery, i, d)} readOnly={readOnly} />}
+
+        {/* Tab 8: ToDo */}
+        {tab === 8 && (
           <div>
             {todoItems.length === 0 ? (
               <div style={{ padding: "40px 20px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
