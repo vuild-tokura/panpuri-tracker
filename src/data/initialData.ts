@@ -240,5 +240,5 @@ export const initGantt = (items: Item[]): GanttRow[] =>
     }))
   );
 
-export const GANTT_START = "2026-03-23";
+export const GANTT_START = "2026-03-01";
 export const GANTT_END = "2026-04-16";
