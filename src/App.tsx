@@ -5,6 +5,7 @@ import { EditCell } from "./components/EditCell";
 import { Th, Td, Tab } from "./components/TableComponents";
 import { ImageCell } from "./components/ImageCell";
 import { SimplePhaseTab } from "./components/SimplePhaseTab";
+import { GanttChart } from "./components/GanttChart";
 import {
   STATUS, STATUS_COLORS,
   PROCURE, PROCURE_COLORS, SAMPLE, SAMPLE_COLORS,
@@ -326,7 +327,16 @@ function App() {
       <div style={{ padding: "12px 16px", overflowX: "auto" }}>
         {/* Tab 0: ガント */}
         {tab === 0 && (
-          <div>ガント (coming soon)</div>
+          <GanttChart
+            gantt={gantt}
+            setGantt={setGantt}
+            items={items}
+            parts={parts}
+            cnc={cnc}
+            finish={finish}
+            filter={filter}
+            readOnly={readOnly}
+          />
         )}
 
         {/* Tab 1: 材料調達 (old 部品) */}
