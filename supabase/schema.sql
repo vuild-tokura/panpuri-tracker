@@ -102,3 +102,81 @@ CREATE POLICY "Allow all on parts" ON parts FOR ALL USING (true) WITH CHECK (tru
 CREATE POLICY "Allow all on approval" ON approval FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on cnc" ON cnc FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all on phase" ON phase FOR ALL USING (true) WITH CHECK (true);
+
+-- gantt テーブル
+CREATE TABLE gantt (
+  id SERIAL PRIMARY KEY,
+  item TEXT NOT NULL,
+  phase TEXT NOT NULL DEFAULT '',
+  company TEXT NOT NULL DEFAULT '',
+  start_date TEXT NOT NULL DEFAULT '',
+  end_date TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT '未着手',
+  note TEXT NOT NULL DEFAULT '',
+  updated_at TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+-- metalwork テーブル（金属加工）
+CREATE TABLE metalwork (
+  id SERIAL PRIMARY KEY,
+  item TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT '未着手',
+  company TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  updated_at TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+-- assembly テーブル（組立）
+CREATE TABLE assembly (
+  id SERIAL PRIMARY KEY,
+  item TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT '未着手',
+  company TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  updated_at TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+-- inspection テーブル（検品）
+CREATE TABLE inspection (
+  id SERIAL PRIMARY KEY,
+  item TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT '未着手',
+  company TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  updated_at TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+-- delivery テーブル（納品）
+CREATE TABLE delivery (
+  id SERIAL PRIMARY KEY,
+  item TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT '未着手',
+  company TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  updated_at TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+ALTER TABLE gantt ENABLE ROW LEVEL SECURITY;
+ALTER TABLE metalwork ENABLE ROW LEVEL SECURITY;
+ALTER TABLE assembly ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inspection ENABLE ROW LEVEL SECURITY;
+ALTER TABLE delivery ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all on gantt" ON gantt FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on metalwork" ON metalwork FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on assembly" ON assembly FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on inspection" ON inspection FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on delivery" ON delivery FOR ALL USING (true) WITH CHECK (true);
+
+-- Add updated_at to existing tables
+ALTER TABLE items ADD COLUMN IF NOT EXISTS updated_at TEXT;
+ALTER TABLE finish ADD COLUMN IF NOT EXISTS updated_at TEXT;
+ALTER TABLE parts ADD COLUMN IF NOT EXISTS updated_at TEXT;
+ALTER TABLE approval ADD COLUMN IF NOT EXISTS updated_at TEXT;
+ALTER TABLE cnc ADD COLUMN IF NOT EXISTS updated_at TEXT;
+ALTER TABLE phase ADD COLUMN IF NOT EXISTS updated_at TEXT;
