@@ -16,6 +16,7 @@ export interface Item {
   dims: string;
   page: string;
   imageUrl?: string;
+  updatedAt?: string;
 }
 
 export interface FinishRow {
@@ -28,6 +29,7 @@ export interface FinishRow {
   assignee?: string;
   deadline?: string;
   imageUrl?: string;
+  updatedAt?: string;
 }
 
 export interface PartRow {
@@ -45,6 +47,7 @@ export interface PartRow {
   companyProcure?: string;
   companyProcess?: string;
   companyProduce?: string;
+  updatedAt?: string;
 }
 
 export const COMPANIES = ["", "VUILD", "KOKKOK", "BETRUST", "Be,想空間", "サンオンクラフト", "ユタカ産業"] as const;
@@ -65,6 +68,7 @@ export interface ApprovalRow {
   approver: string;
   date: string;
   note: string;
+  updatedAt?: string;
 }
 
 export interface CncRow {
@@ -83,6 +87,7 @@ export interface CncRow {
   assignee?: string;
   cncNote?: string;
   imageUrl?: string;
+  updatedAt?: string;
 }
 
 export interface PhaseRow {
@@ -90,6 +95,26 @@ export interface PhaseRow {
   name: string;
   qty: number;
   phases: Record<string, string>;
+  updatedAt?: string;
+}
+
+export interface SimplePhaseRow {
+  item: string;
+  status: string;
+  company: string;
+  note: string;
+  updatedAt?: string;
+}
+
+export interface GanttRow {
+  item: string;
+  phase: string;
+  company: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  note: string;
+  updatedAt?: string;
 }
 
 export const initItems: Item[] = [
@@ -204,3 +229,16 @@ export const initPhase: PhaseRow[] = initItems.map(it => ({
   id: it.id, name: it.name, qty: it.qty,
   phases: Object.fromEntries(PHASES.map(p => [p, "未着手"]))
 }));
+
+export const initSimplePhase = (items: Item[]): SimplePhaseRow[] =>
+  items.map(it => ({ item: it.id, status: "未着手", company: "", note: "" }));
+
+export const initGantt = (items: Item[]): GanttRow[] =>
+  items.flatMap(it =>
+    PHASES.map(phase => ({
+      item: it.id, phase, company: "", startDate: "", endDate: "", status: "未着手", note: "",
+    }))
+  );
+
+export const GANTT_START = "2026-03-23";
+export const GANTT_END = "2026-04-16";
